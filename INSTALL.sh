@@ -18,9 +18,9 @@
 
 set -x -e
 
-INSTALL_DIR="$HOME/opt"
+INSTALL_DIR="$HOME"
 CLIFSRC_DIR="$PWD"
-LLVM_DIR="$CLIFSRC_DIR/../clif_backend"
+LLVM_DIR="$CLIFSRC_DIR/../clif_backend/llvm"
 BUILD_DIR="$LLVM_DIR/build_matcher"
 
 # Ensure CMake is installed (needs 3.5+)
@@ -80,9 +80,9 @@ which "$PYTHON"
 
 # Create a virtual environment for the pyclif installation.
 
-CLIF_VIRTUALENV="$INSTALL_DIR"/clif
-CLIF_PIP="$CLIF_VIRTUALENV/bin/pip"
-virtualenv -p "$PYTHON" "$CLIF_VIRTUALENV"
+CLIF_VIRTUALENV="$INSTALL_DIR"
+CLIF_PIP=pip
+# virtualenv -p "$PYTHON" "$CLIF_VIRTUALENV"
 # Older pip and setuptools can fail.
 # 
 # Regardless, *necessary* on systems with older pip and setuptools.  comment
@@ -93,11 +93,20 @@ virtualenv -p "$PYTHON" "$CLIF_VIRTUALENV"
 
 # Download, build and install LLVM and Clang (needs a specific revision).
 
-mkdir -p "$LLVM_DIR"
-cd "$LLVM_DIR"
-svn co https://llvm.org/svn/llvm-project/llvm/trunk@307315 llvm
-cd llvm/tools
-svn co https://llvm.org/svn/llvm-project/cfe/trunk@307315 clang
+if [ ! -d $LLVM_DIR ]; then
+	mkdir -p "$LLVM_DIR"
+	cd "$LLVM_DIR/.."
+#	svn co https://llvm.org/svn/llvm-project/llvm/trunk@307315 llvm
+	git clone https://github.com/llvm/llvm-project llvm
+	cd llvm
+	# git log | grep -B40 307315
+	git checkout 1cda1d76b110dca737d9c3b8dafe27bab9adbb04
+fi
+cd $LLVM_DIR/llvm/tools
+if [ ! -d clang ]; then
+	#svn co https://llvm.org/svn/llvm-project/cfe/trunk@307315 clang
+	ln -sf ../../clang .
+fi
 ln -s -f -n "$CLIFSRC_DIR/clif" clif
 
 # Build and install the CLIF backend.  Our backend is part of the llvm build.
@@ -107,13 +116,18 @@ ln -s -f -n "$CLIFSRC_DIR/clif" clif
 mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
 cmake -DCMAKE_INSTALL_PREFIX="$CLIF_VIRTUALENV/clang" \
-      -DCMAKE_PREFIX_PATH="$PROTOC_PREFIX_PATH" \
+      -DCMAKE_PREFIX_PATH="/home/gitpod/.pyenv/versions/3.8.2" \
+      -DCMAKE_C_FLAGS="-fPIC" \
+      -DCMAKE_CXX_FLAGS="-fPIC" \
+      -DGOOGLE_PROTOBUF_INCLUDE_DIRS="/home/gitpod/.pyenv/versions/3.8.2/include" \
+      -DGOOGLE_PROTOBUF_LIBRARY_DIRS="/home/gitpod/.pyenv/versions/3.8.2/lib" \
       -DLLVM_INSTALL_TOOLCHAIN_ONLY=true \
       -DCMAKE_BUILD_TYPE=Release \
       -DLLVM_BUILD_DOCS=false \
       -DLLVM_TARGETS_TO_BUILD=X86 \
       "${CMAKE_G_FLAGS[@]}" "$LLVM_DIR/llvm"
-"$MAKE_OR_NINJA" "${MAKE_PARALLELISM[@]}" clif-matcher clif_python_utils_proto_util
+"$MAKE_OR_NINJA" "${MAKE_PARALLELISM[@]}" -j 16 clif-matcher clif_python_utils_proto_util
+"$MAKE_OR_NINJA" "${MAKE_PARALLELISM[@]}" -j 16 clif_python_utils_proto_util
 "$MAKE_OR_NINJA" "${MAKE_INSTALL_PARALLELISM[@]}" install
 
 # Get back to the CLIF Python directory and have pip run setup.py.
