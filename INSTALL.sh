@@ -112,7 +112,10 @@ ln -s -f -n "$CLIFSRC_DIR/clif" clif
 # Build and install the CLIF backend.  Our backend is part of the llvm build.
 # NOTE: To speed up, we build only for X86. If you need it for a different
 # arch, change it to your arch, or just remove the =X86 line below.
-
+git clone https://github.com/python/cpython /workspace/cpython && cd !$ && git checkout v3.8.2 
+./configure --prefix=/home/gitpod/.pyenv/versions/3.8.2 --enable-shared && make -j16 && make install
+cp /workspace/cpython/libpython3.8.a /home/gitpod/.pyenv/versions/3.8.2/lib/libpython3.8.a
+cp /workspace/fastseq/proto_util.cc /workspace/clif_backend/llvm/build_matcher/tools/clif/python/utils/proto_util.cc
 mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
 cmake -DCMAKE_INSTALL_PREFIX="$CLIF_VIRTUALENV/clang" \
@@ -126,8 +129,8 @@ cmake -DCMAKE_INSTALL_PREFIX="$CLIF_VIRTUALENV/clang" \
       -DLLVM_BUILD_DOCS=false \
       -DLLVM_TARGETS_TO_BUILD=X86 \
       "${CMAKE_G_FLAGS[@]}" "$LLVM_DIR/llvm"
+pip install protobuf pyparsing
 "$MAKE_OR_NINJA" "${MAKE_PARALLELISM[@]}" -j 16 clif-matcher clif_python_utils_proto_util
-"$MAKE_OR_NINJA" "${MAKE_PARALLELISM[@]}" -j 16 clif_python_utils_proto_util
 "$MAKE_OR_NINJA" "${MAKE_INSTALL_PARALLELISM[@]}" install
 
 # Get back to the CLIF Python directory and have pip run setup.py.
