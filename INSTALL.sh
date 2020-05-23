@@ -142,6 +142,7 @@ cp "$BUILD_DIR/tools/clif/protos/ast_pb2.py" clif/protos/
 cp "$BUILD_DIR/tools/clif/python/utils/proto_util.cc" clif/python/utils/
 cp "$BUILD_DIR/tools/clif/python/utils/proto_util.h" clif/python/utils/
 cp "$BUILD_DIR/tools/clif/python/utils/proto_util.init.cc" clif/python/utils/
+ln -sf /home/gitpod/.pyenv/versions/3.8.2/include/google cd /home/gitpod/.pyenv/versions/3.8.2/include/python3.8/google
 "$CLIF_PIP" install .
 
 echo "SUCCESS - To use pyclif, run $CLIF_VIRTUALENV/bin/pyclif."
